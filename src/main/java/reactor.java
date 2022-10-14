@@ -100,7 +100,7 @@ public class reactor {
     }
 
     public static class CommandLineParser {
-        List <String> args = new ArrayList<>();
+        List <String> args;
         HashMap<String, List<String>> map = new HashMap<>();
         Set<String> flags = new HashSet<>();
 
@@ -122,9 +122,7 @@ public class reactor {
         // Check if flag is given
         public boolean getFlag(String flagName)
         {
-            if(flags.contains(flagName))
-                return true;
-            return false;
+            return flags.contains(flagName);
         }
 
         // Return argument value for particular argument name
@@ -185,9 +183,7 @@ public class reactor {
             System.err.println(msg);
         }
 
-        String normalizedSmiles = toSmiles(products.get(0)[0]);
-
-        return normalizedSmiles;
+        return toSmiles(products.get(0)[0]);
     }
 
     public static String RegxStandardizeSmiles(LinkedHashMap<String, String> rule, String smiles) throws Exception {
@@ -202,15 +198,17 @@ public class reactor {
 
         CommandLineParser clp = new CommandLineParser(args);
 
-        if(clp.getArgumentValue("rules").length != 1){
+        if(!clp.map.containsKey("rules") || clp.getArgumentValue("rules").length != 1){
             System.out.println("One and only one rule file please.");
             System.exit(1);
         }
 
-        if(clp.getArgumentValue("reactions").length != 1){
+        if(!clp.map.containsKey("reactions") || clp.getArgumentValue("reactions").length != 1){
             System.out.println("One and only one reaction file please.");
             System.exit(1);
         }
+
+        boolean manual = clp.flags.contains("manual");
 
         String reactions_file = clp.getArgumentValue("reactions")[0];
         String rules_file = clp.getArgumentValue("rules")[0];
@@ -218,32 +216,33 @@ public class reactor {
         List<String> smirks_list = parseRuleFile(rules_file);
         List<String> reactions = parseReactionFile(reactions_file);
 
-        for(int i=0; i<reactions.size(); i++) {
+        for (String reaction : reactions) {
 
-            String reaction = reactions.get(i);
             String reactant = reaction.split(">>")[0];
 
             IAtomContainer Reactant = preprocessMolecule(reactant);
             System.out.println("Reactant: ");
             System.out.println(toSmiles(Reactant));
 
-            // Must have
-            boolean moleculeValid = validateMolecule(Reactant);
+            // Atoms will be perceived in the method "validateMolecule"
+            if (!manual) {
+                validateMolecule(Reactant);
+            }
 
             List<IAtomContainer[]> ProductLists;
             try {
                 ProductLists = apply_rules(smirks_list, Reactant);
-            }catch (Exception e) {
+            } catch (Exception e) {
                 System.out.println("Exception on " + reactant);
                 continue;
             }
 
-            if(ProductLists.size() == 0) System.out.println("No products for: " + reactant);
+            if (ProductLists.size() == 0) System.out.println("No products for: " + reactant);
 
-            Set<String> ruleProductSmiles = new HashSet<String>();
+            Set<String> ruleProductSmiles = new HashSet<>();
 
-            for(IAtomContainer[] productList: ProductLists) {
-                for(IAtomContainer ruleproduct: productList) {
+            for (IAtomContainer[] productList : ProductLists) {
+                for (IAtomContainer ruleproduct : productList) {
 
                     String productSmiles = toSmiles(ruleproduct);
                     IAtomContainer mol = preprocessMolecule(productSmiles);
@@ -255,7 +254,7 @@ public class reactor {
                 }
             }
             System.out.println("Products:");
-            for(String product_smiles: ruleProductSmiles)
+            for (String product_smiles : ruleProductSmiles)
                 System.out.println(product_smiles);
         }
     }
@@ -285,9 +284,7 @@ public class reactor {
                 for (IAtomContainer[] substrates : list) {
                     for (IAtomContainer substrate : substrates) {
                         List<IAtomContainer[]> products = apply(substrate, true, true, rule);
-                        for (IAtomContainer[] prdcts : products) {
-                            newList.add(prdcts);
-                        }
+                        newList.addAll(products);
                     }
                 }
             }
@@ -295,7 +292,7 @@ public class reactor {
         return newList;
     }
 
-    public static final boolean checkSmirks(final String newSmirks) throws Exception {
+    public static boolean checkSmirks(final String newSmirks) throws Exception {
         SMIRKSReaction reaction = fromSmirks(newSmirks);
 
         if (reaction==null) {
@@ -326,8 +323,8 @@ public class reactor {
                                                 boolean applyRuleToSinglePosition,
                                                 String smirks)
             throws Exception {
-        List<IAtomContainer[]> rProducts = new ArrayList<IAtomContainer[]>();
-        HashSet<String> rProductSmiles = new HashSet<String>();
+        List<IAtomContainer[]> rProducts = new ArrayList<>();
+        HashSet<String> rProductSmiles = new HashSet<>();
         try {
 
             IAtomContainerSet products = applySmirks(
@@ -341,7 +338,7 @@ public class reactor {
                 for (IAtomContainer p : products.atomContainers()) {
                     if (splitUnconnectedMolecules) {
                         List<IAtomContainer> splitProducts = new
-                                ArrayList<IAtomContainer>();
+                                ArrayList<>();
                         for (IAtomContainer m : ConnectivityChecker
                                 .partitionIntoMolecules(p).atomContainers()) {
 
@@ -351,8 +348,7 @@ public class reactor {
                                 splitProducts.add(m);
                             }
                         }
-                        rProducts.add(splitProducts.toArray(new
-                                IAtomContainer[splitProducts.size()]));
+                        rProducts.add(splitProducts.toArray(new IAtomContainer[splitProducts.size()]));
                     } else {
                         String smiles = toSmiles(p);
                         if (!rProductSmiles.contains(smiles)) {
@@ -413,22 +409,22 @@ public class reactor {
         return set;
     }
 
-    public static boolean validateMolecule(final IAtomContainer molecule)
+    public static void validateMolecule(final IAtomContainer molecule)
             throws CDKException {
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(molecule);
         for (int i = 0; i < molecule.getAtomCount(); i++) {
             if (null == molecule.getAtom(i).getValency()) {
-                return false;
+                throw new CDKException("Valency is not available");
             }
         }
-        return true;
+
     }
 
     public static SMIRKSReaction fromSmirks(final String smirks)
             throws Exception {
         IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
         final SMIRKSManager ms = new SMIRKSManager(builder);
-        SMIRKSReaction react = null;
+        SMIRKSReaction react;
         try {
             react = ms.parse(smirks);
         } catch (Exception e) {
@@ -461,9 +457,7 @@ public class reactor {
             final SmilesParser sp = new SmilesParser(
                     SilentChemObjectBuilder.getInstance());
 
-            final IAtomContainer mol = sp.parseSmiles(smiles);
-
-            return mol;
+            return sp.parseSmiles(smiles);
         } catch (final Exception e) {
             throw new Exception("SMILES: " + smiles, e);
         }
@@ -507,10 +501,8 @@ public class reactor {
             if(s[0].contains(".")){
                 String[] reactants = s[0].split("\\.");
                 String[] products = s[1].split("\\.");
-                Set<String> reactants_set = new HashSet<String>();
-                for(String reactant: reactants) reactants_set.add(reactant);
-                Set<String> products_set = new HashSet<String>();
-                for(String product: products) products_set.add(product);
+                Set<String> reactants_set = new HashSet<>(Arrays.asList(reactants));
+                Set<String> products_set = new HashSet<>(Arrays.asList(products));
                 if(reactants_set.size() != products_set.size()) continue;
                 line = "";
                 for(String reactant:reactants){
