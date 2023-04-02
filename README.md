@@ -48,4 +48,4 @@ Products:
 C(=CC(=O)[O-])C(=O)CC(=O)C(=O)[O-]
 ```
 
-ps: The second product after apply rules is actually equivalent with the product in the second reaction (enol -> keto). Because products are normalized in envipath_reaction to get rid of ambiguity. Normalized rules can be found in src/main/java/reactor.java, including basicRuleSet, enhancedRuleSet, exoticRuleSet, cutCoARuleSet, and enolKetoRuleSet. 
+ps: The second product after applying rules is actually equivalent with the product in the second reaction (enol -> keto). Because products are normalized in envipath_reaction to get rid of ambiguity. Normalized rules can be found in src/main/java/reactor.java, including basicRuleSet, enhancedRuleSet, exoticRuleSet, cutCoARuleSet, and enolKetoRuleSet. 
