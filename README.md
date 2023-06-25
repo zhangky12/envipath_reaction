@@ -4,9 +4,11 @@ Introduction
 `Eawag envipath_reaction`
 -----------------------------
 
-envipath_reaction is a side project of enviRule to test automatically extracted rules on targeted reactions.
+envipath_reaction is a side project of enviRule (https://github.com/zhangky12/enviRule) to test automatically extracted rules on targeted reactions. 
+"enviRule: An End-to-end System for Automatic Extraction of Reaction Patterns from Environmental Contaminant Biotransformation Pathways" (https://doi.org/10.1093/bioinformatics/btad407) by Kunyang Zhang and Prof. Dr. Kathrin Fenner.
 
-###Note: you can find reaction groups and rules to play with under the folder "example"
+
+Note: you can find reaction groups and rules to play with under the folder "example"
 
 `Quick start`
 -----------------------------
